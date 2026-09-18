@@ -13,9 +13,33 @@ function app() {
 test('serves a valid Stremio manifest', async () => {
   const res = await request(app()).get('/manifest.json').expect(200);
   assert.equal(res.body.id, 'community.ytdlp');
-  assert.deepEqual(res.body.types, ['movie']);
-  assert.deepEqual(res.body.idPrefixes, ['yt:']);
+  assert.deepEqual(res.body.types, ['movie', 'series']);
+  assert.deepEqual(res.body.idPrefixes, ['yt:', 'ytpl:']);
   assert.deepEqual(res.body.resources, ['catalog', 'meta', 'stream']);
   assert.equal(res.body.catalogs[0].id, 'yt-search');
   assert.equal(res.body.catalogs[0].extra[0].name, 'search');
+  assert.equal(res.body.behaviorHints.configurable, true);
+});
+
+test('with configured playlists: series catalog and type included', async () => {
+  const app = express();
+  app.get('/manifest.json', manifestRoute({
+    addonId: 'community.ytdlp',
+    getConfig: () => ({ playlists: [{ id: 'PL1234567890ab', url: 'u' }] }),
+  }));
+  const res = await request(app).get('/manifest.json').expect(200);
+  assert.equal(res.body.catalogs.length, 2);
+  assert.equal(res.body.catalogs[1].id, 'yt-playlists');
+  assert.deepEqual(res.body.types, ['movie', 'series']);
+  assert.ok(res.body.idPrefixes.includes('ytpl:'));
+});
+
+test('without playlists: search catalog only', async () => {
+  const app = express();
+  app.get('/manifest.json', manifestRoute({
+    addonId: 'community.ytdlp',
+    getConfig: () => ({ playlists: [] }),
+  }));
+  const res = await request(app).get('/manifest.json').expect(200);
+  assert.equal(res.body.catalogs.length, 1);
 });

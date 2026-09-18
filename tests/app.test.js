@@ -66,3 +66,24 @@ test('no ETag: repeated requests always return a full 200 body', async () => {
   assert.equal(res2.status, 200);
   assert.ok(res2.text.length > 10);
 });
+
+test('configure page parses playlists and builds the cfg install URL', async () => {
+  const app = createApp({ token: 'tok1234567890abcdefgh', deps });
+  const res = await request(app)
+    .get('/tok1234567890abcdefgh/configure')
+    .query({ playlists: 'https://www.youtube.com/playlist?list=PL1234567890ab' });
+  assert.equal(res.status, 200);
+  assert.match(res.text, /stremio:\/\/[^/]+\/tok1234567890abcdefgh\/cfg-/);
+});
+
+test('cfg-qualified mount serves manifest with the playlist catalog', async () => {
+  const app = createApp({ token: 'tok1234567890abcdefgh', deps });
+  // build a valid cfg segment via the service directly
+  const { encodeConfig } = await import('../src/services/playlistConfig.js');
+  const cfg = encodeConfig({ playlists: [{ id: 'PL1234567890ab', url: 'https://www.youtube.com/playlist?list=PL1234567890ab' }] });
+  const res = await request(app).get(`/tok1234567890abcdefgh/cfg-${cfg}/manifest.json`);
+  assert.equal(res.status, 200);
+  assert.equal(res.body.catalogs.length, 2);
+  assert.equal(res.body.catalogs[1].id, 'yt-playlists');
+  await request(app).get(`/tok1234567890abcdefgh/cfg-invalid!!/manifest.json`).expect(404);
+});

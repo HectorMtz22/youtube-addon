@@ -45,6 +45,21 @@ export async function searchVideos(query, { limit = 20, run = runYtDlp } = {}) {
     });
 }
 
+export async function playlistVideos(url, { run = runYtDlp, limit = 200 } = {}) {
+  // -J --flat-playlist returns the playlist object: { title, entries: [...] }
+  const out = await run(['-J', '--flat-playlist', '--no-warnings', `--playlist-items=1-${limit}`, url]);
+  const playlist = JSON.parse(out);
+  const entries = (playlist.entries || [])
+    .map(v => ({
+      id: v.id,
+      title: v.title,
+      duration: v.duration ?? null,
+      thumbnail: `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`,
+    }))
+    .filter(v => isValidVideoId(v.id));
+  return { title: playlist.title ?? null, entries };
+}
+
 export async function getVideoInfo(videoId, { run = runYtDlp } = {}) {
   if (!isValidVideoId(videoId)) throw new Error('invalid video id');
   return JSON.parse(await run(['-J', '--no-warnings', `https://www.youtube.com/watch?v=${videoId}`]));

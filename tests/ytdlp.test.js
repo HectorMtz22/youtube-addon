@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isValidVideoId, normalizeQuery, searchVideos, runYtDlp } from '../src/services/ytdlp.js';
+import { isValidVideoId, normalizeQuery, searchVideos, playlistVideos, runYtDlp } from '../src/services/ytdlp.js';
 
 test('isValidVideoId', () => {
   assert.equal(isValidVideoId('dQw4w9WgXcQ'), true);
@@ -34,4 +34,21 @@ test('searchVideos shells out with argument array (no shell)', async () => {
 
 test('runYtDlp wraps execFile and rejects on nonzero exit', async () => {
   await assert.rejects(() => runYtDlp(['--version-nope'], { bin: 'false' }));
+});
+
+test('playlistVideos returns playlist title and filtered entries', async () => {
+  const calls = [];
+  const fakeRun = async (args) => { calls.push(args); return JSON.stringify({
+    title: 'My Mix',
+    entries: [
+      { id: 'aaaaaaaaaaa', title: 'P1', duration: 60 },
+      { id: 'bad-id!!', title: 'skip me' },
+      { id: 'bbbbbbbbbbb', title: 'P2' },
+    ],
+  }); };
+  const out = await playlistVideos('https://www.youtube.com/playlist?list=PLtest', { run: fakeRun });
+  assert.equal(calls[0].at(-1), 'https://www.youtube.com/playlist?list=PLtest');
+  assert.equal(out.title, 'My Mix');
+  assert.deepEqual(out.entries.map(v => v.id), ['aaaaaaaaaaa', 'bbbbbbbbbbb']);
+  assert.equal(out.entries[0].thumbnail, 'https://i.ytimg.com/vi/aaaaaaaaaaa/hqdefault.jpg');
 });
