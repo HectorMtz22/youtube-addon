@@ -26,6 +26,16 @@ export function createApp({ token, deps = {} }) {
   // Mount everything under /:token via a Router so handlers see
   // req.baseUrl = /<token> and play URLs automatically carry the token.
   const router = express.Router();
+
+  // Access log: one line per completed request (method, path, status, ms).
+  router.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      console.log(`[access] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${Date.now() - start}ms)`);
+    });
+    next();
+  });
+
   router.get('/manifest.json', manifestRoute({ addonId: process.env.ADDON_ID || 'community.ytdlp' }));
   router.get('/catalog/:type/:id/:extra?.json',
     catalogRoute({ searchVideos: ytdlp.searchVideos, cache: searchCache }));
