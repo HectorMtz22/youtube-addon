@@ -17,6 +17,7 @@ export function createApp({ token, deps = {} }) {
   const searchCache = createCache({ ttlMs: 30 * 60 * 1000 });
   const metaCache = createCache({ ttlMs: 60 * 60 * 1000 });
   const infoCache = createCache({ ttlMs: 10 * 60 * 1000 });
+  const hlsCache = createCache({ ttlMs: 6 * 60 * 1000 }); // pinned HLS playlist URLs (expire sooner than extraction URLs)
   const ytdlp = {
     searchVideos: deps.searchVideos ?? searchVideos,
     // One extraction per video id no matter who asks (prefetch, meta, stream).
@@ -27,6 +28,7 @@ export function createApp({ token, deps = {} }) {
     metaCache,
     infoCache,
     buildMeta,
+    hlsCache,
   });
 
   const app = express();
@@ -66,7 +68,7 @@ export function createApp({ token, deps = {} }) {
   router.get('/meta/:type/:videoId.json',
     metaRoute({ getVideoInfo: ytdlp.getVideoInfo, cache: metaCache, infoCache }));
   router.get('/stream/:type/:videoId.json',
-    streamRoute({ getVideoInfo: ytdlp.getVideoInfo, cache: infoCache, metaCache, buildMeta }));
+    streamRoute({ getVideoInfo: ytdlp.getVideoInfo, cache: infoCache, metaCache, buildMeta, hlsCache }));
   router.get('/play/:videoId.mp4', playRoute({ getVideoInfo: ytdlp.getVideoInfo }));
 
   app.use('/:token',

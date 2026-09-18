@@ -38,6 +38,25 @@ export function buildStreams(info, playBaseUrl) {
   return streams;
 }
 
+// The HLS manifest we serve is an adaptive variant playlist (240p..4K).
+// Some players lock onto a low rendition and never ramp up — pin the
+// highest rendition <= maxHeight by resolving its single-quality playlist
+// URL server-side. Falls back to the variant URL on any failure.
+export function bestRendition(manifestText, maxHeight = 1080) {
+  const renditions = [...manifestText.matchAll(
+    /#EXT-X-STREAM-INF:.*?RESOLUTION=\d+x(\d+).*?URI="([^"]+)"/g)]
+    .map(m => ({ h: +m[1], url: m[2] }))
+    .filter(r => r.h <= maxHeight);
+  if (!renditions.length) return null;
+  return renditions.sort((a, b) => b.h - a.h)[0].url;
+}
+
+export async function pinHls(manifestUrl, { maxHeight = 1080, fetchImpl = fetch } = {}) {
+  const res = await fetchImpl(manifestUrl, { signal: AbortSignal.timeout(3000) });
+  if (!res.ok) return null;
+  return bestRendition(await res.text(), maxHeight);
+}
+
 // Behind a reverse proxy the original host/proto arrive in X-Forwarded-*
 // headers; use them so play URLs carry the client-facing (public) address
 // instead of the internal one. First entry = client-facing host.
@@ -49,7 +68,7 @@ export function requestBaseUrl(req) {
   return `${proto}://${host}${req.baseUrl || ''}/`;
 }
 
-export function streamRoute({ getVideoInfo, cache, metaCache, buildMeta }) {
+export function streamRoute({ getVideoInfo, cache, metaCache, buildMeta, hlsCache }) {
   return async (req, res) => {
     const videoId = (req.params.videoId || '').replace(/^yt:/, '');
     if (!isValidVideoId(videoId)) return res.status(404).json({ error: 'invalid video id' });
@@ -67,6 +86,25 @@ export function streamRoute({ getVideoInfo, cache, metaCache, buildMeta }) {
         return res.status(502).json({ error: 'yt-dlp extraction failed' });
       }
     }
-    res.json({ streams: buildStreams(info, requestBaseUrl(req)) });
+    const streams = buildStreams(info, requestBaseUrl(req));
+    // Pin the HLS stream to its best rendition (players lock onto low
+    // renditions in adaptive playlists). Warm path: await (fast); cold
+    // path (sync extraction): background so the first response stays fast.
+    const hlsStream = streams.find(x => x.url.includes('m3u8'));
+    if (hlsStream) {
+      const pinned = hlsCache?.get(`hls:${videoId}`);
+      if (pinned) {
+        hlsStream.url = pinned;
+      } else {
+        // ~200-400ms: resolve the best single-quality playlist from the
+        // variant manifest, cache it, serve pinned on this response too.
+        const url = await pinHls(hlsStream.url).catch(() => null);
+        if (url) {
+          hlsCache?.set(`hls:${videoId}`, url);
+          hlsStream.url = url;
+        }
+      }
+    }
+    res.json({ streams });
   };
 }

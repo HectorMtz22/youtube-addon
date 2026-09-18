@@ -92,3 +92,36 @@ test('without forwarded headers, play URLs use the request host', async () => {
   const fmp4 = res.body.streams.find(s => s.url.includes('/play/'));
   assert.match(fmp4.url, /^http:\/\/192\.168\.0\.5:7000\/play\//);
 });
+
+test('bestRendition picks the highest rendition <= maxHeight', async () => {
+  const { bestRendition } = await import('../src/routes/stream.js');
+  const manifest = [
+    '#EXTM3U',
+    '#EXT-X-STREAM-INF:BANDWIDTH=1,RESOLUTION=426x240,URI="https://gvs/240.m3u8"',
+    '#EXT-X-STREAM-INF:BANDWIDTH=2,RESOLUTION=1920x1080,URI="https://gvs/1080.m3u8"',
+    '#EXT-X-STREAM-INF:BANDWIDTH=3,RESOLUTION=2560x1440,URI="https://gvs/1440.m3u8"',
+  ].join('\n');
+  assert.equal(bestRendition(manifest, 1080), 'https://gvs/1080.m3u8');
+  assert.equal(bestRendition(manifest, 360), 'https://gvs/240.m3u8');
+  assert.equal(bestRendition('#EXTM3U\nnothing here', 1080), null);
+});
+
+test('stream route pins HLS to the best rendition and caches it', async () => {
+  const pinnedCache = createCache({ ttlMs: 1000 });
+  const calls = [];
+  const fakeFetch = async () => ({ ok: true, text: async () => [
+    '#EXTM3U',
+    '#EXT-X-STREAM-INF:BANDWIDTH=1,RESOLUTION=426x240,URI="https://gvs/240.m3u8"',
+    '#EXT-X-STREAM-INF:BANDWIDTH=2,RESOLUTION=1920x1080,URI="https://gvs/1080.m3u8"',
+  ].join('\n') });
+  const app = express();
+  app.get('/stream/:videoId.json', streamRoute({
+    getVideoInfo: async () => fixture,
+    cache: createCache({ ttlMs: 1000 }),
+    hlsCache: pinnedCache,
+  }));
+  const res = await request(app).get('/stream/yt:dQw4w9WgXcQ.json');
+  const hlsStream = res.body.streams.find(s => s.url.includes('m3u8'));
+  assert.equal(hlsStream.url, 'https://gvs/1080.m3u8');
+  assert.equal(pinnedCache.get('hls:dQw4w9WgXcQ'), 'https://gvs/1080.m3u8');
+});
