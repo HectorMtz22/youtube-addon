@@ -44,3 +44,49 @@ test('stream route returns streams and validates the id', async () => {
   }));
   await request(failing).get('/stream/yt:dQw4w9WgXcQ.json').expect(502);
 });
+
+test('play URLs honor X-Forwarded-Host/Proto when behind a proxy', async () => {
+  const app = express();
+  app.get('/stream/:videoId.json', streamRoute({
+    getVideoInfo: async () => fixture,
+    cache: createCache({ ttlMs: 1000 }),
+  }));
+  const res = await request(app)
+    .get('/stream/yt:dQw4w9WgXcQ.json')
+    .set('x-forwarded-host', 'addon.mau.codes')
+    .set('x-forwarded-proto', 'https');
+  assert.deepEqual(
+    res.body.streams.filter(s => s.url.includes('/play/')).map(s => s.url),
+    [
+      'https://addon.mau.codes/play/dQw4w9WgXcQ.mp4?height=1080',
+      'https://addon.mau.codes/play/dQw4w9WgXcQ.mp4?height=720',
+    ],
+  );
+});
+
+test('multi-value X-Forwarded-Host uses the first (client-facing) entry', async () => {
+  const app = express();
+  app.get('/stream/:videoId.json', streamRoute({
+    getVideoInfo: async () => fixture,
+    cache: createCache({ ttlMs: 1000 }),
+  }));
+  const res = await request(app)
+    .get('/stream/yt:dQw4w9WgXcQ.json')
+    .set('x-forwarded-host', 'addon.mau.codes, internal-proxy')
+    .set('x-forwarded-proto', 'https');
+  const fmp4 = res.body.streams.find(s => s.url.includes('/play/'));
+  assert.ok(fmp4.url.startsWith('https://addon.mau.codes/'));
+});
+
+test('without forwarded headers, play URLs use the request host', async () => {
+  const app = express();
+  app.get('/stream/:videoId.json', streamRoute({
+    getVideoInfo: async () => fixture,
+    cache: createCache({ ttlMs: 1000 }),
+  }));
+  const res = await request(app)
+    .get('/stream/yt:dQw4w9WgXcQ.json')
+    .set('host', '192.168.0.5:7000');
+  const fmp4 = res.body.streams.find(s => s.url.includes('/play/'));
+  assert.match(fmp4.url, /^http:\/\/192\.168\.0\.5:7000\/play\//);
+});

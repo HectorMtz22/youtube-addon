@@ -38,6 +38,17 @@ export function buildStreams(info, playBaseUrl) {
   return streams;
 }
 
+// Behind a reverse proxy the original host/proto arrive in X-Forwarded-*
+// headers; use them so play URLs carry the client-facing (public) address
+// instead of the internal one. First entry = client-facing host.
+export function requestBaseUrl(req) {
+  const fwdHost = String(req.get('x-forwarded-host') || '').split(',')[0].trim();
+  const fwdProto = String(req.get('x-forwarded-proto') || '').split(',')[0].trim();
+  const host = fwdHost || req.headers.host || '';
+  const proto = fwdProto || req.protocol;
+  return `${proto}://${host}${req.baseUrl || ''}/`;
+}
+
 export function streamRoute({ getVideoInfo, cache }) {
   return async (req, res) => {
     const videoId = (req.params.videoId || '').replace(/^yt:/, '');
@@ -52,8 +63,7 @@ export function streamRoute({ getVideoInfo, cache }) {
         console.error(`[stream] extraction failed for ${videoId}:`, String(err.message || err));
         return res.status(502).json({ error: 'yt-dlp extraction failed' });
       }
-      const playBaseUrl = `${req.protocol}://${req.headers.host}${req.baseUrl || ''}/`;
-      streams = buildStreams(info, playBaseUrl);
+      streams = buildStreams(info, requestBaseUrl(req));
       cache.set(cacheKey, streams);
     }
     res.json({ streams });
