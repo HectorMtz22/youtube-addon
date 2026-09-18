@@ -24,6 +24,7 @@ test('meta returns Stremio meta object', async () => {
   assert.equal(res.body.meta.name, 'Test Video');
   assert.equal(res.body.meta.videos[0].id, 'yt:dQw4w9WgXcQ');
   assert.equal(res.body.meta.releaseInfo, '2026');
+  assert.equal(res.body.meta.released, '2026-01-01');
   assert.equal(res.body.meta.runtime, '4 min');
 });
 
