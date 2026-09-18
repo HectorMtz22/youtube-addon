@@ -68,10 +68,12 @@ token automatically on every request after the manifest is installed:
 - `GET /:token/catalog/:type/:id/search={query}.json` — yt-dlp flat search,
   20 results, cached 30 min
 - `GET /:token/meta/:videoId.json` — cached 1 h
-- `GET /:token/stream/:videoId.json` — one yt-dlp JSON extraction per call
-  (fresh URLs), cached 10 min; returns the ladder list below
-- `GET /:token/play/:videoId.mp4?...` — ffmpeg live-mux fallback; only fetched
-  by Stremio when it picks a non-HLS stream
+- `GET /:token/stream/:videoId.json` — yt-dlp JSON extraction, cached 10 min
+  (extraction URLs are valid ~6 h, so a short cache avoids redundant runs while
+  limiting staleness); returns the ladder list below
+- `GET /:token/play/:videoId.mp4?height=1080` — ffmpeg live-mux fallback; the
+  `height` param selects the DASH format pair (h264 video + AAC audio); only
+  fetched by Stremio when it picks a non-HLS stream
 
 ## 5. Playback ladder (core logic)
 
