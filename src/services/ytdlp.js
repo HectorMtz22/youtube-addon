@@ -1,0 +1,43 @@
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileP = promisify(execFile);
+
+export function isValidVideoId(id) {
+  return typeof id === 'string' && /^[A-Za-z0-9_-]{11}$/.test(id);
+}
+
+export function normalizeQuery(q) {
+  if (typeof q !== 'string') return null;
+  const s = q.replace(/\s+/g, ' ').trim().slice(0, 200);
+  return s.length ? s : null;
+}
+
+export async function runYtDlp(args, { timeoutMs = 90000, bin = 'yt-dlp' } = {}) {
+  const { stdout } = await execFileP(bin, args, {
+    timeout: timeoutMs,
+    maxBuffer: 20 * 1024 * 1024,
+  });
+  return stdout;
+}
+
+export async function searchVideos(query, { limit = 20, run = runYtDlp } = {}) {
+  const out = await run(['--flat-playlist', '--dump-json', '--no-warnings', `ytsearch${limit}:${query}`]);
+  return out
+    .split('\n')
+    .filter(Boolean)
+    .map(line => {
+      const v = JSON.parse(line);
+      return {
+        id: v.id,
+        title: v.title,
+        duration: v.duration ?? null,
+        thumbnail: `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`,
+      };
+    });
+}
+
+export async function getVideoInfo(videoId, { run = runYtDlp } = {}) {
+  if (!isValidVideoId(videoId)) throw new Error('invalid video id');
+  return JSON.parse(await run(['-J', '--no-warnings', `https://www.youtube.com/watch?v=${videoId}`]));
+}
