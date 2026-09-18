@@ -6,12 +6,13 @@ RUN apt-get update \
 
 ARG YTDLP_VERSION
 RUN test -n "$YTDLP_VERSION" \
- && curl -fsSL -o /usr/local/bin/yt-dlp \
+ && curl -fsSL -o yt-dlp \
       "https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/yt-dlp" \
  && curl -fsSL \
       "https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/SHA2-256SUMS" \
       | grep -E "  yt-dlp$" | sha256sum -c - \
- && chmod 0755 /usr/local/bin/yt-dlp
+ && install -m 0755 yt-dlp /usr/local/bin/yt-dlp \
+ && rm -f yt-dlp
 
 WORKDIR /app
 COPY package.json package-lock.json ./
