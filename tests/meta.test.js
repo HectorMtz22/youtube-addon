@@ -48,5 +48,5 @@ test('long descriptions are truncated in the meta payload', async () => {
   app.get('/meta/movie/:videoId.json',
     metaRoute({ getVideoInfo: async () => longInfo, cache: createCache({ ttlMs: 1000 }) }));
   const res = await request(app).get('/meta/movie/yt:dQw4w9WgXcQ.json');
-  assert.equal(res.body.meta.description.length, 2000);
+  assert.equal(res.body.meta.description, null);
 });

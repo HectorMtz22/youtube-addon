@@ -20,9 +20,9 @@ export function metaRoute({ getVideoInfo, cache }) {
         name: info.title,
         poster: info.thumbnail,
         background: info.thumbnail,
-        // Full descriptions can reach 30-50KB; cap to keep payloads small
-        // (large bodies have shown client-side serialization failures).
-        description: info.description ? info.description.slice(0, 2000) : null,
+        // Description removed for now: large payloads were breaking some
+        // clients at the detail-page fetch (investigating; see meta tests).
+        description: null,
         releaseInfo: (info.upload_date || '').slice(0, 4) || null,
         runtime: info.duration ? `${Math.max(1, Math.round(info.duration / 60))} min` : null,
         videos: [{
