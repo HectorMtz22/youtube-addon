@@ -41,3 +41,12 @@ test('upstream failure → 502', async () => {
   const res = await request(app).get('/meta/movie/yt:dQw4w9WgXcQ.json');
   assert.equal(res.status, 502);
 });
+
+test('long descriptions are truncated in the meta payload', async () => {
+  const longInfo = { ...fakeInfo, description: 'x'.repeat(5000) };
+  const app = express();
+  app.get('/meta/movie/:videoId.json',
+    metaRoute({ getVideoInfo: async () => longInfo, cache: createCache({ ttlMs: 1000 }) }));
+  const res = await request(app).get('/meta/movie/yt:dQw4w9WgXcQ.json');
+  assert.equal(res.body.meta.description.length, 2000);
+});
