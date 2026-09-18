@@ -40,7 +40,10 @@ export function buildMeta(info) {
     runtime: info.duration ? `${Math.max(1, Math.round(info.duration / 60))} min` : null,
     videos: [{
       id: `yt:${info.id}`,
-      title: info.title,
+      // Stremio renders "{meta.name} - {video.title}" in the player header —
+      // identical values duplicate it, so the video title is omitted for
+      // single videos.
+      title: undefined,
       released: info.upload_date
         ? `${info.upload_date.slice(0, 4)}-${info.upload_date.slice(4, 6)}-${info.upload_date.slice(6, 8)}`
         : undefined,
