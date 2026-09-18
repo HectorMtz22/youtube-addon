@@ -50,3 +50,9 @@ test('full happy path: catalog → meta → stream through the token prefix', as
   assert.equal(playUrl.pathname.startsWith('/tok1234567890abcdefgh/play/'), true,
     `play URL must carry the token prefix, got: ${fmp4.url}`);
 });
+
+test('json responses end with a newline', async () => {
+  const app = createApp({ token: 'tok1234567890abcdefgh', deps });
+  const res = await request(app).get('/tok1234567890abcdefgh/manifest.json');
+  assert.ok(res.text.endsWith('\n'), 'response should end with newline');
+});

@@ -36,6 +36,17 @@ export function createApp({ token, deps = {} }) {
     next();
   });
 
+  // JSON bodies get a trailing newline: some native HTTP stacks hand raw
+  // socket buffers to hand-rolled parsers that mis-handle an EOF that lands
+  // immediately after the closing brace. The newline is spec-legal and
+  // harmless to compliant clients.
+  router.use((req, res, next) => {
+    const json = res.json.bind(res);
+    res.json = (body) => res.set('Content-Type', 'application/json; charset=utf-8')
+      .send(JSON.stringify(body) + '\n');
+    next();
+  });
+
   router.get('/manifest.json', manifestRoute({ addonId: process.env.ADDON_ID || 'community.ytdlp' }));
   router.get('/catalog/:type/:id/:extra?.json',
     catalogRoute({ searchVideos: ytdlp.searchVideos, cache: searchCache }));
