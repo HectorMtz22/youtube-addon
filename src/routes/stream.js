@@ -49,24 +49,23 @@ export function requestBaseUrl(req) {
   return `${proto}://${host}${req.baseUrl || ''}/`;
 }
 
-export function streamRoute({ getVideoInfo, cache, metaCache, buildMeta }) {
+export function streamRoute({ getVideoInfo, cache }) {
   return async (req, res) => {
     const videoId = (req.params.videoId || '').replace(/^yt:/, '');
     if (!isValidVideoId(videoId)) return res.status(404).json({ error: 'invalid video id' });
-    // Cache stores the raw yt-dlp info; the ladder is rebuilt per request so
-    // play URLs always match the current client-facing host. Cache hits are
-    // instant (populated by the prefetcher right after a search).
-    let info = cache.get(`info:${videoId}`);
-    if (!info) {
+    const cacheKey = `streams:${videoId}`;
+    let streams = cache.get(cacheKey);
+    if (!streams) {
+      let info;
       try {
         info = await getVideoInfo(videoId);
-        cache.set(`info:${videoId}`, info);
-        metaCache?.set(`meta:${videoId}`, buildMeta(info));
       } catch (err) {
         console.error(`[stream] extraction failed for ${videoId}:`, String(err.message || err));
         return res.status(502).json({ error: 'yt-dlp extraction failed' });
       }
+      streams = buildStreams(info, requestBaseUrl(req));
+      cache.set(cacheKey, streams);
     }
-    res.json({ streams: buildStreams(info, requestBaseUrl(req)) });
+    res.json({ streams });
   };
 }

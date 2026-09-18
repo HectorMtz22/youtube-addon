@@ -5,9 +5,7 @@ import { metaRoute } from './routes/meta.js';
 import { streamRoute } from './routes/stream.js';
 import { playRoute } from './routes/play.js';
 import { createCache } from './services/cache.js';
-import { createPrefetcher } from './services/prefetch.js';
 import { searchVideos, getVideoInfo } from './services/ytdlp.js';
-import { buildMeta } from './routes/meta.js';
 
 export function createApp({ token, deps = {} }) {
   if (typeof token !== 'string' || token.length < 20) {
@@ -15,17 +13,11 @@ export function createApp({ token, deps = {} }) {
   }
   const searchCache = createCache({ ttlMs: 30 * 60 * 1000 });
   const metaCache = createCache({ ttlMs: 60 * 60 * 1000 });
-  const infoCache = createCache({ ttlMs: 10 * 60 * 1000 });
+  const streamCache = createCache({ ttlMs: 10 * 60 * 1000 });
   const ytdlp = {
     searchVideos: deps.searchVideos ?? searchVideos,
     getVideoInfo: deps.getVideoInfo ?? getVideoInfo,
   };
-  const prefetch = createPrefetcher({
-    getVideoInfo: ytdlp.getVideoInfo,
-    metaCache,
-    infoCache,
-    buildMeta,
-  });
 
   const app = express();
   app.disable('x-powered-by');
@@ -57,11 +49,11 @@ export function createApp({ token, deps = {} }) {
 
   router.get('/manifest.json', manifestRoute({ addonId: process.env.ADDON_ID || 'community.ytdlp' }));
   router.get('/catalog/:type/:id/:extra?.json',
-    catalogRoute({ searchVideos: ytdlp.searchVideos, cache: searchCache, prefetch }));
+    catalogRoute({ searchVideos: ytdlp.searchVideos, cache: searchCache }));
   router.get('/meta/:type/:videoId.json',
-    metaRoute({ getVideoInfo: ytdlp.getVideoInfo, cache: metaCache, infoCache }));
+    metaRoute({ getVideoInfo: ytdlp.getVideoInfo, cache: metaCache }));
   router.get('/stream/:type/:videoId.json',
-    streamRoute({ getVideoInfo: ytdlp.getVideoInfo, cache: infoCache, metaCache, buildMeta }));
+    streamRoute({ getVideoInfo: ytdlp.getVideoInfo, cache: streamCache }));
   router.get('/play/:videoId.mp4', playRoute({ getVideoInfo: ytdlp.getVideoInfo }));
 
   app.use('/:token',
