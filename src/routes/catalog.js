@@ -1,6 +1,6 @@
 import { normalizeQuery } from '../services/ytdlp.js';
 
-export function catalogRoute({ searchVideos, cache }) {
+export function catalogRoute({ searchVideos, cache, prefetch }) {
   return async (req, res) => {
     // Stremio requests /catalog/{type}/{id}/search={query}.json — Express 4
     // matches that with an :extra param (already percent-decoded), we strip
@@ -22,6 +22,10 @@ export function catalogRoute({ searchVideos, cache }) {
           description: null,
         }));
         cache.set(cacheKey, metas);
+        // Fire-and-forget: warm meta/info caches so clicking a result is
+        // instant instead of a 2-3s synchronous extraction (client timeouts
+        // truncate those responses mid-JSON).
+        prefetch?.(metas.map(m => m.id.slice(3)));
       } catch (err) {
         console.error(`[catalog] search failed for "${query}":`, String(err.message || err));
         metas = [];
