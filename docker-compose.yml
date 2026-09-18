@@ -1,0 +1,15 @@
+services:
+  youtube-addon:
+    build:
+      context: .
+      args:
+        YTDLP_VERSION: ${YTDLP_VERSION:?set YTDLP_VERSION in .env}
+    restart: unless-stopped
+    ports:
+      - "${PORT:-7000}:7000"
+    environment:
+      ADDON_TOKEN: ${ADDON_TOKEN:?ADDON_TOKEN required — generate: openssl rand -hex 16}
+      ADDON_ID: ${ADDON_ID:-community.ytdlp}
+    read_only: true
+    tmpfs:
+      - /tmp

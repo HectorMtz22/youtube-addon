@@ -1,0 +1,12 @@
+{
+  "name": "youtube-addon",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.js\"",
+    "start": "node src/index.js"
+  },
+  "dependencies": { "express": "^4.19.0" },
+  "devDependencies": { "supertest": "^7.0.0" }
+}
