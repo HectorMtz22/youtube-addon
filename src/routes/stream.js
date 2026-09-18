@@ -4,17 +4,6 @@ export function buildStreams(info, playBaseUrl) {
   const id = info.id;
   const formats = info.formats || [];
   const streams = [];
-  const hls = formats
-    .filter(f => f.manifest_url && (f.protocol || '').startsWith('m3u8') && (f.vcodec || '').startsWith('avc1'))
-    .sort((a, b) => (b.height || 0) - (a.height || 0))[0];
-  if (hls) {
-    streams.push({
-      title: `HLS ${hls.height || '?'}p — seek & PiP`,
-      name: `HLS ${hls.height || '?'}p`,
-      url: hls.manifest_url,
-      behaviorHints: { notWebReady: false },
-    });
-  }
   for (const h of [1080, 720]) {
     if (formats.some(f => (f.vcodec || '').startsWith('avc1') && f.acodec === 'none' && f.height === h)
         && formats.some(f => f.vcodec === 'none' && (f.acodec || '').startsWith('mp4a'))) {
@@ -25,6 +14,17 @@ export function buildStreams(info, playBaseUrl) {
         behaviorHints: { notWebReady: false },
       });
     }
+  }
+  const hls = formats
+    .filter(f => f.manifest_url && (f.protocol || '').startsWith('m3u8') && (f.vcodec || '').startsWith('avc1'))
+    .sort((a, b) => (b.height || 0) - (a.height || 0))[0];
+  if (hls) {
+    streams.push({
+      title: `HLS ${hls.height || '?'}p — seek & PiP`,
+      name: `HLS ${hls.height || '?'}p`,
+      url: hls.manifest_url,
+      behaviorHints: { notWebReady: false },
+    });
   }
   const p18 = formats.find(f => f.format_id === '18');
   if (p18 && p18.url) {

@@ -10,14 +10,16 @@ const fixture = JSON.parse(readFileSync(new URL('./fixtures/video-info.json', im
 
 test('ladder: HLS first, then fMP4 for 1080p and 720p, then 360p', () => {
   const streams = buildStreams(fixture, `http://srv:7000/tok123/`);
-  assert.equal(streams[0].url, 'https://manifest.googlevideo.com/api/manifest/hls_playlist/fixture.m3u8');
-  assert.match(streams[0].title, /HLS.*1080p/);
-  const fmp4 = streams.filter(s => s.url.includes('/play/'));
-  assert.deepEqual(fmp4.map(s => s.url), [
+  const hlsEntry = streams.find(x => x.url.includes('m3u8'));
+  assert.match(hlsEntry.title, /HLS.*1080p/);
+  // Reordered so Stremio's default stream choice lands on HLS (empirical:
+  // Stremio did not pick the first entry; testing last-position default).
+  assert.deepEqual(streams.map(s => s.url), [
     'http://srv:7000/tok123/play/dQw4w9WgXcQ.mp4?height=1080',
     'http://srv:7000/tok123/play/dQw4w9WgXcQ.mp4?height=720',
+    'https://manifest.googlevideo.com/api/manifest/hls_playlist/fixture.m3u8',
+    'https://rr1---sn-x.googlevideo.com/videoplayback?fixture=18',
   ]);
-  assert.equal(streams.at(-1).url, 'https://rr1---sn-x.googlevideo.com/videoplayback?fixture=18');
 });
 
 test('ladder when no HLS formats: no HLS entry, fMP4 still present', () => {
