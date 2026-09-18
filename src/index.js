@@ -31,6 +31,9 @@ export function createApp({ token, deps = {} }) {
 
   const app = express();
   app.disable('x-powered-by');
+  // Always-200: no ETag/304 — some Stremio clients surface the 304
+  // empty-body as a serialization error instead of using their cache.
+  app.disable('etag');
   app.get('/', (_req, res) => res.json({ status: 'ok', name: 'youtube-addon' }));
 
   // Mount everything under /:token via a Router so handlers see
