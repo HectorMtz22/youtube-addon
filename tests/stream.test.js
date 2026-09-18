@@ -119,6 +119,7 @@ test('stream route pins HLS to the best rendition and caches it', async () => {
     getVideoInfo: async () => fixture,
     cache: createCache({ ttlMs: 1000 }),
     hlsCache: pinnedCache,
+    fetchImpl: fakeFetch,
   }));
   const res = await request(app).get('/stream/yt:dQw4w9WgXcQ.json');
   const hlsStream = res.body.streams.find(s => s.url.includes('m3u8'));

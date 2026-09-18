@@ -68,7 +68,7 @@ export function requestBaseUrl(req) {
   return `${proto}://${host}${req.baseUrl || ''}/`;
 }
 
-export function streamRoute({ getVideoInfo, cache, metaCache, buildMeta, hlsCache }) {
+export function streamRoute({ getVideoInfo, cache, metaCache, buildMeta, hlsCache, fetchImpl = fetch }) {
   return async (req, res) => {
     const videoId = (req.params.videoId || '').replace(/^yt:/, '');
     if (!isValidVideoId(videoId)) return res.status(404).json({ error: 'invalid video id' });
@@ -98,7 +98,7 @@ export function streamRoute({ getVideoInfo, cache, metaCache, buildMeta, hlsCach
       } else {
         // ~200-400ms: resolve the best single-quality playlist from the
         // variant manifest, cache it, serve pinned on this response too.
-        const url = await pinHls(hlsStream.url).catch(() => null);
+        const url = await pinHls(hlsStream.url, { fetchImpl }).catch(() => null);
         if (url) {
           hlsCache?.set(`hls:${videoId}`, url);
           hlsStream.url = url;
