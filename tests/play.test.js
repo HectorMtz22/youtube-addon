@@ -30,3 +30,15 @@ test('buildFfmpegArgs uses stream copy, fMP4, pipe output — no shell', () => {
     '-f', 'mp4', 'pipe:1',
   ]);
 });
+
+test('HEAD /play answers instantly without extraction', async () => {
+  const express = (await import('express')).default;
+  const request = (await import('supertest')).default;
+  const { playRoute } = await import('../src/routes/play.js');
+  let calls = 0;
+  const app = express();
+  app.get('/play/:videoId.mp4', playRoute({ getVideoInfo: async () => { calls++; return fixture; } }));
+  const res = await request(app).head('/play/dQw4w9WgXcQ.mp4?height=1080');
+  assert.equal(res.status, 200);
+  assert.equal(calls, 0);
+});

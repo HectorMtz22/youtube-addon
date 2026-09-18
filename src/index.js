@@ -6,6 +6,7 @@ import { streamRoute } from './routes/stream.js';
 import { playRoute } from './routes/play.js';
 import { createCache } from './services/cache.js';
 import { createPrefetcher } from './services/prefetch.js';
+import { singleFlight } from './services/singleflight.js';
 import { searchVideos, getVideoInfo } from './services/ytdlp.js';
 import { buildMeta } from './routes/meta.js';
 
@@ -18,7 +19,8 @@ export function createApp({ token, deps = {} }) {
   const infoCache = createCache({ ttlMs: 10 * 60 * 1000 });
   const ytdlp = {
     searchVideos: deps.searchVideos ?? searchVideos,
-    getVideoInfo: deps.getVideoInfo ?? getVideoInfo,
+    // One extraction per video id no matter who asks (prefetch, meta, stream).
+    getVideoInfo: singleFlight(deps.getVideoInfo ?? getVideoInfo),
   };
   const prefetch = createPrefetcher({
     getVideoInfo: ytdlp.getVideoInfo,

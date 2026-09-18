@@ -28,6 +28,13 @@ export function playRoute({ getVideoInfo } = {}) {
   return async (req, res) => {
     const videoId = req.params.videoId;
     if (!isValidVideoId(videoId)) return res.status(404).json({ error: 'invalid video id' });
+    // Clients probe stream URLs with HEAD — answer instantly instead of
+    // running a full extraction for a body that will never be sent.
+    if (req.method === 'HEAD') {
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Accept-Ranges', 'none');
+      return res.status(200).end();
+    }
     const height = Math.min(Math.max(parseInt(req.query.height, 10) || 1080, 360), 1080);
     let info;
     try {
