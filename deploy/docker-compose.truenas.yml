@@ -1,0 +1,17 @@
+# TrueNAS custom app (Apps → Discover Apps → ⋮ → Install via YAML).
+# Paste this file's contents into the YAML editor, then set ADDON_TOKEN
+# to a real value first: openssl rand -hex 16
+services:
+  youtube-addon:
+    image: ghcr.io/hectormtz22/youtube-addon:latest
+    container_name: youtube-addon
+    restart: unless-stopped
+    ports:
+      - "7000:7000"  # Web UI port binding for the app in TrueNAS UI
+    environment:
+      # REQUIRED — 20+ random chars. Never expose this install URL publicly.
+      ADDON_TOKEN: "REPLACE_ME_openssl_rand_hex_16"
+      ADDON_ID: "community.ytdlp"
+    read_only: true
+    tmpfs:
+      - /tmp
