@@ -14,6 +14,12 @@ RUN test -n "$YTDLP_VERSION" \
  && install -m 0755 yt-dlp /usr/local/bin/yt-dlp \
  && rm -f yt-dlp
 
+# bgutil poToken provider plugin (see POT_PROVIDER_URL in compose/env)
+RUN mkdir -p /home/node/.config/yt-dlp/plugins \
+ && curl -fsSL -o /home/node/.config/yt-dlp/plugins/bgutil-ytdlp-pot-provider.zip \
+      "https://github.com/Brainicism/bgutil-ytdlp-pot-provider/releases/latest/download/bgutil-ytdlp-pot-provider.zip" \
+ && chown -R node:node /home/node/.config
+
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev

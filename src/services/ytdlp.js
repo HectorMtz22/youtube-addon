@@ -13,8 +13,16 @@ export function normalizeQuery(q) {
   return s.length ? s : null;
 }
 
+// Optional poToken provider (bgutil): when POT_PROVIDER_URL is set, every
+// yt-dlp run asks the provider for a proof-of-origin token. If the provider
+// is unreachable the plugin fails open — extraction continues without it.
+export function potArgs() {
+  const url = process.env.POT_PROVIDER_URL;
+  return url ? ['--extractor-args', `youtubepot-bgutilhttp:base_url=${url}`] : [];
+}
+
 export async function runYtDlp(args, { timeoutMs = 90000, bin = 'yt-dlp' } = {}) {
-  const { stdout } = await execFileP(bin, args, {
+  const { stdout } = await execFileP(bin, [...potArgs(), ...args], {
     timeout: timeoutMs,
     maxBuffer: 20 * 1024 * 1024,
   });

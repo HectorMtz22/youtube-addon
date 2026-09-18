@@ -12,6 +12,29 @@ services:
       # REQUIRED — 20+ random chars. Never expose this install URL publicly.
       ADDON_TOKEN: "REPLACE_ME_openssl_rand_hex_16"
       ADDON_ID: "community.ytdlp"
+      # poToken provider (see bgutil service below) — fixes YouTube
+      # throttling/bot-checks. Internal address only.
+      POT_PROVIDER_URL: "http://bgutil:4416"
+    depends_on:
+      - bgutil
     read_only: true
     tmpfs:
       - /tmp
+    networks:
+      - pot
+
+  # YouTube poToken provider. UNAUTHENTICATED — never publish ports for it.
+  # Reachable only from containers on this network (default: none exposed).
+  bgutil:
+    image: brainicism/bgutil-ytdlp-pot-provider:2.0.0
+    container_name: bgutil-provider
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    networks:
+      - pot
+
+networks:
+  pot:
+    internal: false  # bgutil must reach Google's challenge servers

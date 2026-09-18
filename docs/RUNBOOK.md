@@ -18,7 +18,16 @@ private and add ghcr.io credentials in the TrueNAS app's registry settings).
    `curl -fsS http://<nas-ip>:7000/` → `{"status":"ok",...}` and
    `curl -s -o /dev/null -w '%{http_code}\n' http://<nas-ip>:7000/wrongtoken/manifest.json` → `404`
 
-### Update yt-dlp on TrueNAS
+#### poToken provider (bgutil)
+Deployed as the internal `bgutil` service (no published ports — it is
+unauthenticated; nothing else may reach it). The addon requests
+proof-of-origin tokens from it via `POT_PROVIDER_URL=http://bgutil:4416`;
+if the provider is down, extraction continues without tokens (fail-open).
+If the provider's version drifts from the plugin baked into the addon image
+(major mismatch), yt-dlp logs a version error — re-run the `docker-publish`
+workflow and pull, or bump the pinned `bgutil` image tag.
+
+## Update yt-dlp on TrueNAS
 The yt-dlp version is baked into the image at CI build time (resolved to the
 latest yt-dlp release on every main-branch build). To update:
 re-run the `docker-publish` workflow (Actions tab → docker-publish → Run
