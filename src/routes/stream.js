@@ -38,7 +38,7 @@ export function buildStreams(info, playBaseUrl) {
   return streams;
 }
 
-export function streamRoute({ getVideoInfo = getVideoInfo, cache }) {
+export function streamRoute({ getVideoInfo, cache }) {
   return async (req, res) => {
     const videoId = (req.params.videoId || '').replace(/^yt:/, '');
     if (!isValidVideoId(videoId)) return res.status(404).json({ error: 'invalid video id' });

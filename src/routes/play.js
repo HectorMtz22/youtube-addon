@@ -24,10 +24,10 @@ export function buildFfmpegArgs(videoUrl, audioUrl) {
   ];
 }
 
-export function playRoute({ getVideoInfo = getVideoInfo } = {}) {
+export function playRoute({ getVideoInfo } = {}) {
   return async (req, res) => {
     const videoId = req.params.videoId;
-    if (!isValidVideoId(videoId)) return res.status(400).json({ error: 'invalid video id' });
+    if (!isValidVideoId(videoId)) return res.status(404).json({ error: 'invalid video id' });
     const height = Math.min(Math.max(parseInt(req.query.height, 10) || 1080, 360), 1080);
     let info;
     try {
@@ -46,7 +46,14 @@ export function playRoute({ getVideoInfo = getVideoInfo } = {}) {
     const ff = spawn('ffmpeg', buildFfmpegArgs(video.url, audio.url), { stdio: ['ignore', 'pipe', 'pipe'] });
     let stderr = '';
     ff.stderr.on('data', d => { stderr = (stderr + d).slice(-2000); });
-    pipeline(ff.stdout, res).catch(() => {});
+    // Spec §7: never exit on per-request errors — an ENOENT here (ffmpeg
+    // missing) would otherwise surface as an uncaughtException.
+    ff.on('error', err => {
+      console.error('[play] spawn failed:', err.message);
+      if (!res.headersSent) res.status(502).json({ error: 'ffmpeg spawn failed' });
+      else res.end();
+    });
+    pipeline(ff.stdout, res).catch(err => console.error('[play] stream pipe error:', err.message));
     res.on('close', () => ff.kill('SIGKILL'));
     ff.on('close', code => {
       if (code !== 0 && !res.writableEnded) {

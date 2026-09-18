@@ -54,3 +54,31 @@ test('long query is normalized before reaching searchVideos', async () => {
   assert.equal(res.status, 200);
   assert.equal(captured.length, 200);
 });
+
+test('literal % in query (percent-encoded) returns 200, no hang', async () => {
+  let captured;
+  const app = express();
+  app.get('/catalog/movie/yt-search/:extra?.json',
+    catalogRoute({
+      searchVideos: async (query) => { captured = query; return []; },
+      cache: createCache({ ttlMs: 1000 }),
+    }));
+  const res = await request(app).get('/catalog/movie/yt-search/search=50%25off.json');
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body.metas, []);
+  assert.equal(captured, '50%off');
+});
+
+test('bare query without search= prefix is used as-is', async () => {
+  let captured;
+  const app = express();
+  app.get('/catalog/movie/yt-search/:extra?.json',
+    catalogRoute({
+      searchVideos: async (query) => { captured = query; return fakeSearch(query); },
+      cache: createCache({ ttlMs: 1000 }),
+    }));
+  const res = await request(app).get('/catalog/movie/yt-search/hello.json');
+  assert.equal(res.status, 200);
+  assert.equal(captured, 'hello');
+  assert.equal(res.body.metas[0].id, 'yt:dQw4w9WgXcQ');
+});

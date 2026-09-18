@@ -7,7 +7,6 @@ import { buildStreams, streamRoute } from '../src/routes/stream.js';
 import { createCache } from '../src/services/cache.js';
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/video-info.json', import.meta.url)));
-const BASE = 'http://srv:7000/tok123/';
 
 test('ladder: HLS first, then fMP4 for 1080p and 720p, then 360p', () => {
   const streams = buildStreams(fixture, `http://srv:7000/tok123/`);
