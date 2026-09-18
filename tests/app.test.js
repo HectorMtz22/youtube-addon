@@ -56,3 +56,13 @@ test('json responses end with a newline', async () => {
   const res = await request(app).get('/tok1234567890abcdefgh/manifest.json');
   assert.ok(res.text.endsWith('\n'), 'response should end with newline');
 });
+
+test('no ETag: repeated requests always return a full 200 body', async () => {
+  const app = createApp({ token: 'tok1234567890abcdefgh', deps });
+  const res1 = await request(app).get('/tok1234567890abcdefgh/manifest.json');
+  assert.equal(res1.headers.etag, undefined);
+  const res2 = await request(app).get('/tok1234567890abcdefgh/manifest.json')
+    .set('if-none-match', res1.headers.etag || 'nope');
+  assert.equal(res2.status, 200);
+  assert.ok(res2.text.length > 10);
+});

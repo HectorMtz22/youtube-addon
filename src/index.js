@@ -29,6 +29,10 @@ export function createApp({ token, deps = {} }) {
 
   const app = express();
   app.disable('x-powered-by');
+  // No ETag: Stremio's native clients re-request meta/catalog with
+  // If-None-Match, and some handle the 304-empty-body as a parse failure
+  // ("premature end of input") instead of using their cached copy.
+  app.disable('etag');
   app.get('/', (_req, res) => res.json({ status: 'ok', name: 'youtube-addon' }));
 
   // Mount everything under /:token via a Router so handlers see
